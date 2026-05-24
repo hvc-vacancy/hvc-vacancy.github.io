@@ -312,7 +312,7 @@
       <img id="image-modal-img" src="" alt="">
     </div>
   </div>
-  <script src="./dashboard-data.js?v=4bd1e8a1d406"></script>
+  <script src="./dashboard-data.js?v=5648aa5727a7"></script>
   <script>
     const dashboard = window.__HARVEST_DASHBOARD_DATA__;
     if (!dashboard) { throw new Error('dashboard-data-not-loaded'); }
@@ -380,6 +380,12 @@
       if (text.startsWith('未')) return 'status-missing';
       if (text.startsWith('休') || text.startsWith('-')) return 'status-closed';
       return '';
+    }
+    function roomColumnKey(room) {
+      return typeof room === 'string' ? room : (room.key || room.name || '');
+    }
+    function roomColumnLabel(room) {
+      return typeof room === 'string' ? room : (room.label || room.name || room.key || '');
     }
     function currentFacility() {
       return dashboard.facilities.find((facility) => facility.hotelId === facilitySelect.value) || dashboard.facilities[0] || null;
@@ -844,12 +850,12 @@
       const header = [
         '<th class="sticky-col detail-time-col">確認日時</th>',
         '<th class="num">空き</th>',
-        ...entry.roomTypes.map((room) => '<th class="room" title="' + escapeHtml(room) + '">' + escapeHtml(room) + '</th>')
+        ...entry.roomTypes.map((room) => '<th class="room" title="' + escapeHtml(roomColumnLabel(room)) + '">' + escapeHtml(roomColumnLabel(room)) + '</th>')
       ].join('');
       const visibleChecks = showDetailHistory ? entry.checks : entry.checks.slice(0, 1);
       const rows = visibleChecks.map((check) => {
         const cells = entry.roomTypes.map((room) => {
-          const value = check.values[room] || null;
+          const value = check.values[roomColumnKey(room)] || null;
           const status = value ? value.status : '';
           const title = value ? (value.title || [value.statusRaw, value.additionalText].filter(Boolean).join(' ')) : '';
           return '<td><span class="status ' + classForStatus(status) + '" title="' + escapeHtml(title) + '">' + escapeHtml(status) + '</span></td>';
