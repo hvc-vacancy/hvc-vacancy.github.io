@@ -225,6 +225,7 @@
       <span class="sample status-wait">C</span><span>キャンセル待ち</span>
       <span class="sample status-wait">C10+</span><span>キャンセル待ち10組以上</span>
       <span class="sample status-ref">参△</span><span>ホーム利用参考（空室数に含める）</span>
+      <span class="sample status-ref">←参△</span><span>前日参照（空室数に含める）</span>
       <span class="sample status-special">特</span><span>特定期間（空室判定外）</span>
       <span class="sample status-closed">休</span><span>全館休業日</span>
       <span class="sample status-none">×</span><span>空きなし</span>
@@ -312,7 +313,7 @@
       <img id="image-modal-img" src="" alt="">
     </div>
   </div>
-  <script src="./dashboard-data.js?v=5648aa5727a7"></script>
+  <script src="./dashboard-data.js?v=c3039cb2436a"></script>
   <script>
     const dashboard = window.__HARVEST_DASHBOARD_DATA__;
     if (!dashboard) { throw new Error('dashboard-data-not-loaded'); }
@@ -376,7 +377,7 @@
       if (text.startsWith('C') || text.startsWith('⊝')) return 'status-wait';
       if (text.startsWith('×')) return 'status-none';
       if (text.startsWith('特') || text.startsWith('☆')) return 'status-special';
-      if (text.startsWith('参') || text.startsWith('H') || text.startsWith('↑')) return 'status-ref';
+      if (text.startsWith('←') || text.startsWith('参') || text.startsWith('H') || text.startsWith('↑')) return 'status-ref';
       if (text.startsWith('未')) return 'status-missing';
       if (text.startsWith('休') || text.startsWith('-')) return 'status-closed';
       return '';
