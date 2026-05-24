@@ -1,0 +1,971 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="refresh" content="3600">
+  <title>Harvest Club 相互利用 空室履歴</title>
+  <link rel="icon" href="data:,">
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f7f9;
+      --surface: #ffffff;
+      --line: #d9dee7;
+      --text: #1d2430;
+      --muted: #667085;
+      --green: #16794c;
+      --green-bg: #e8f6ef;
+      --amber: #9a5b00;
+      --amber-bg: #fff2d2;
+      --red: #b42318;
+      --red-bg: #fee4e2;
+      --wait: #594ac2;
+      --wait-bg: #ebe9ff;
+      --special: #6b4e16;
+      --special-bg: #fff7d6;
+      --ref: #344054;
+      --ref-bg: #eef2f6;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font-family: "Segoe UI", "Yu Gothic UI", Meiryo, sans-serif; font-size: 18px; }
+    header { padding: 18px 22px 14px; background: var(--surface); border-bottom: 1px solid var(--line); }
+    h1 { margin: 0 0 10px; font-size: 24px; line-height: 1.3; font-weight: 650; }
+    .meta, .legend, .controls, .summary, .detail-toolbar, .facility-filter, .calendar-legend, .header-actions, .log-toolbar, .calendar-facility-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .pill { display: inline-flex; align-items: center; min-height: 28px; padding: 4px 9px; border: 1px solid var(--line); border-radius: 6px; background: #fbfcfe; color: var(--muted); white-space: nowrap; }
+    .legend { margin-top: 10px; }
+    .sample, .status { display: inline-flex; align-items: center; justify-content: center; min-width: 34px; min-height: 24px; padding: 2px 7px; border-radius: 6px; font-weight: 700; }
+    main { padding: 16px 22px 28px; }
+    .toolbar { display: flex; justify-content: space-between; gap: 14px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+    .date-controls { align-items: center; }
+    .date-controls select { min-width: 170px; }
+    .header-actions { margin-top: 10px; }
+    .action-status { color: var(--muted); }
+    .log-panel[hidden] { display: none; }
+    .detail-toolbar { align-items: flex-start; flex-direction: column; justify-content: flex-start; margin-bottom: 8px; }
+    .detail-toolbar .view-title { margin: 4px 0 0; }
+    .detail-title-row { justify-content: flex-start; }
+    .controls label { font-weight: 650; }
+    select, button { min-height: 34px; border: 1px solid var(--line); background: var(--surface); color: var(--text); border-radius: 6px; padding: 5px 10px; font: inherit; }
+    button { cursor: pointer; }
+    button:hover, select:hover { border-color: #98a2b3; }
+    button:disabled { cursor: default; color: #98a2b3; }
+    .facility-jump { min-height: 0; border: 0; background: transparent; padding: 0; color: inherit; font: inherit; font-weight: 650; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+    .facility-jump:hover { border-color: transparent; color: #175cd3; }
+    .facility-col.is-selected { background: #dbeafe; }
+    .facility-jump.is-selected { color: #175cd3; font-weight: 800; text-decoration: none; }
+    .summary { color: var(--muted); }
+    .summary-note { margin: 0 0 10px; color: var(--muted); line-height: 1.5; }
+    .summary-note strong { color: var(--text); font-weight: 650; }
+    .facility-filter { margin: 0 0 10px; padding: 0; border: 0; color: var(--muted); }
+    .facility-filter legend { padding: 0; margin-right: 2px; font-weight: 650; color: var(--text); }
+    .section-title-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+    .section-title-row .view-title { margin: 0; }
+    .calendar-title-row { justify-content: flex-start; }
+    .summary-title-row { justify-content: flex-start; }
+    .action-button { color: #ffffff; background: #175cd3; border-color: #175cd3; font-weight: 750; box-shadow: 0 1px 2px rgba(16, 24, 40, .16); }
+    .action-button:hover { background: #0b4db3; border-color: #0b4db3; }
+    .action-button:disabled { color: #98a2b3; background: #eef2f6; border-color: #d0d5dd; box-shadow: none; }
+    .disclosure-button { display: inline-flex; align-items: center; gap: 8px; padding: 7px 13px; border-color: #0b4db3; box-shadow: 0 1px 2px rgba(16, 24, 40, .16), 0 0 0 3px rgba(23, 92, 211, .14); }
+    .disclosure-button::after { content: "▼"; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 999px; background: rgba(255, 255, 255, .2); font-size: 14px; line-height: 1; }
+    .disclosure-button[aria-expanded="true"]::after { content: "▲"; }
+    .facility-filter-panel[hidden] { display: none; }
+    .calendar-facility-actions { width: 100%; margin: 0 0 8px; }
+    .calendar-window-controls { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; }
+    .calendar-window-label { min-width: 126px; color: #344054; font-weight: 700; text-align: center; }
+    #calendar-facility-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px 14px; width: 100%; padding-top: 12px; border-top: 1px solid var(--line); }
+    .facility-group { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+    .facility-group-title { color: #344054; font-size: 16px; font-weight: 700; }
+    .facility-group-options { display: flex; gap: 6px 8px; flex-wrap: wrap; align-items: center; }
+    .facility-option, .inline-checkbox { display: inline-flex; align-items: center; gap: 7px; min-height: 34px; font-weight: 500; }
+    input[type="checkbox"] { width: 21px; height: 21px; margin: 0; accent-color: #175cd3; cursor: pointer; }
+    .inline-checkbox { padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; background: #fbfcfe; color: #344054; cursor: pointer; }
+    .inline-checkbox:has(input:checked) { border-color: #84adff; background: #eff6ff; color: #175cd3; font-weight: 750; }
+    .inline-checkbox:has(input:disabled) { cursor: default; color: #98a2b3; background: #eef2f6; }
+    .calendar-legend { margin: 6px 0 10px; color: var(--muted); }
+    .calendar-swatch { display: inline-flex; width: 22px; height: 18px; border-radius: 5px; border: 1px solid var(--line); }
+    .calendar-swatch.available { background: #dbeafe; border-color: #60a5fa; }
+    .calendar-swatch.none { background: #eef2f6; border-color: #d0d5dd; }
+    .calendar-months { display: grid; grid-template-columns: repeat(auto-fit, minmax(288px, 1fr)); gap: 12px; }
+    .calendar-month { overflow: hidden; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
+    .calendar-month-title { margin: 0; padding: 9px 10px; border-bottom: 1px solid var(--line); font-size: 18px; font-weight: 650; background: #f9fafb; }
+    .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+    .calendar-weekday, .calendar-day, .calendar-empty-cell { min-height: 58px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    .calendar-weekday { display: flex; align-items: center; justify-content: center; min-height: 36px; color: var(--muted); font-size: 16px; font-weight: 650; background: #fbfcfe; }
+    .calendar-weekday-0 { color: #b42318; background: #fee4e2; }
+    .calendar-weekday-6 { color: #175cd3; background: #dbeafe; }
+    .calendar-day { width: 100%; padding: 6px; border-top: 0; border-left: 0; border-radius: 0; text-align: left; background: #ffffff; }
+    .calendar-day:hover { border-color: var(--line); background: #f9fafb; }
+    .calendar-day.is-selected { outline: 2px solid #175cd3; outline-offset: -2px; }
+    .calendar-day.has-available { color: #0b3b89; background: #dbeafe; }
+    .calendar-day.has-available:hover { background: #bfdbfe; }
+    .calendar-day.has-none { color: #475467; background: #eef2f6; }
+    .calendar-day.no-data { color: #98a2b3; background: #ffffff; }
+    .calendar-date { display: inline-flex; align-items: center; gap: 4px; color: #667085; font-size: 16px; font-weight: 600; line-height: 1.2; }
+    .calendar-day.is-sunday .calendar-date, .calendar-day.is-holiday .calendar-date { color: #b42318; }
+    .calendar-day.is-saturday .calendar-date { color: #175cd3; }
+    .holiday-badge { color: #b42318; font-size: 15px; font-weight: 750; }
+    .calendar-count { display: flex; align-items: center; justify-content: center; min-height: 26px; margin-top: 4px; font-size: 22px; font-weight: 750; line-height: 1; }
+    .calendar-count-zero { color: #344054; background: rgba(255,255,255,.58); border: 1px solid rgba(102,112,133,.3); border-radius: 999px; }
+    .calendar-count-positive { color: #0b3b89; }
+    .calendar-empty-cell { background: #fbfcfe; }
+    .table-wrap { overflow: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
+    table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 980px; }
+    th, td { border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 7px 8px; text-align: center; vertical-align: middle; white-space: nowrap; }
+    th:last-child, td:last-child { border-right: 0; }
+    tr:last-child td { border-bottom: 0; }
+    thead th { position: sticky; top: 0; z-index: 1; background: #f9fafb; font-weight: 650; color: #344054; }
+    .sticky-col { position: sticky; left: 0; z-index: 2; background: #ffffff; text-align: left; min-width: 116px; }
+    thead .sticky-col { z-index: 3; background: #f9fafb; }
+    .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .room { max-width: 156px; overflow: hidden; text-overflow: ellipsis; }
+    .status-full { color: var(--green); background: var(--green-bg); }
+    .status-some { color: var(--amber); background: var(--amber-bg); }
+    .status-wait { color: var(--wait); background: var(--wait-bg); }
+    .status-none { color: var(--red); background: var(--red-bg); }
+    .status-special { color: var(--special); background: var(--special-bg); }
+    .status-ref, .status-closed { color: var(--ref); background: var(--ref-bg); }
+    .status-missing { color: #475467; background: #eef2f6; }
+    .view-block { margin-bottom: 18px; }
+    .detail-section { border-top: 1px solid var(--line); padding-top: 14px; }
+    .view-title { margin: 0 0 8px; font-size: 20px; line-height: 1.35; font-weight: 650; }
+    .detail-links { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .detail-link { display: inline-flex; align-items: center; min-height: 34px; padding: 5px 10px; border: 1px solid #b2ccff; border-radius: 6px; background: #eff6ff; color: #175cd3; font-weight: 700; text-decoration: none; }
+    .detail-link:hover { background: #dbeafe; border-color: #84adff; }
+    .facility-col { max-width: 132px; min-width: 92px; overflow: hidden; text-overflow: ellipsis; }
+    .availability-cell-positive { background: #fff7ed; }
+    .availability-cell-zero { background: #f2f4f7; }
+    .availability-count { display: inline-flex; align-items: center; justify-content: center; min-width: 38px; min-height: 24px; padding: 2px 7px; border-radius: 6px; font-weight: 700; }
+    .availability-positive { color: #9a3412; background: #fed7aa; }
+    .availability-zero { color: var(--muted); background: #e4e7ec; }
+    .row-action { min-height: 28px; padding: 3px 8px; }
+    .room-images-block { margin-top: 14px; }
+    .room-image-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+    .room-image-card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+    .room-image-title { padding: 8px 10px; font-weight: 700; color: #344054; border-bottom: 1px solid var(--line); background: #f9fafb; }
+    .room-image-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 240px)); justify-content: start; gap: 10px; padding: 10px; }
+    .room-image-button { display: block; width: 100%; padding: 0; border: 0; background: transparent; border-radius: 6px; overflow: hidden; cursor: zoom-in; }
+    .room-image-button:hover { outline: 2px solid #175cd3; outline-offset: 2px; }
+    .room-image-list img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: #eef2f6; }
+    .image-modal[hidden] { display: none; }
+    .image-modal { position: fixed; inset: 0; z-index: 50; display: grid; grid-template-rows: auto minmax(0, 1fr); background: rgba(15, 23, 42, .86); color: #fff; }
+    .image-modal-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; background: rgba(15, 23, 42, .92); }
+    .image-modal-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
+    .image-modal-close { color: #fff; background: rgba(255, 255, 255, .12); border-color: rgba(255, 255, 255, .35); }
+    .image-modal-body { display: flex; align-items: center; justify-content: center; min-height: 0; padding: 16px; }
+    .image-modal-body img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px; box-shadow: 0 18px 48px rgba(0, 0, 0, .35); }
+    .empty { padding: 28px; color: var(--muted); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
+    @media (max-width: 760px) {
+      body { font-size: 16px; }
+      header { padding: 14px 12px 12px; }
+      main { padding: 12px 12px 24px; }
+      h1 { font-size: 20px; }
+      .meta, .legend, .header-actions, .summary, .calendar-legend { gap: 6px; }
+      .pill { min-height: 26px; padding: 3px 7px; white-space: normal; }
+      .toolbar { align-items: stretch; }
+      .controls { width: 100%; }
+      .date-controls select, .detail-toolbar select { width: 100%; min-width: 0; }
+      .calendar-title-row, .summary-title-row, .detail-title-row { align-items: stretch; }
+      .calendar-title-row .view-title, .summary-title-row .view-title, .detail-title-row .view-title { width: 100%; }
+      .disclosure-button { width: 100%; justify-content: center; min-height: 42px; }
+      .calendar-window-controls { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); width: 100%; margin-left: 0; }
+      .calendar-window-controls button { min-height: 42px; padding-left: 8px; padding-right: 8px; }
+      .calendar-window-label { min-width: 76px; }
+      .calendar-months { grid-template-columns: 1fr; }
+      .calendar-weekday, .calendar-day, .calendar-empty-cell { min-height: 52px; }
+      .calendar-weekday { min-height: 32px; font-size: 14px; }
+      .calendar-day { padding: 5px; }
+      .calendar-date { font-size: 14px; }
+      .holiday-badge { font-size: 13px; }
+      .calendar-count { min-height: 24px; font-size: 19px; }
+      .calendar-facility-actions { display: grid; grid-template-columns: 1fr; width: 100%; }
+      #calendar-facility-options { grid-template-columns: 1fr; }
+      .facility-group-options { display: grid; grid-template-columns: 1fr; }
+      .facility-option, .inline-checkbox { min-height: 40px; }
+      input[type="checkbox"] { width: 24px; height: 24px; }
+      .detail-links { width: 100%; display: grid; grid-template-columns: 1fr; }
+      .inline-checkbox, .detail-link { width: 100%; justify-content: center; }
+      .table-wrap { margin-left: -12px; margin-right: -12px; border-left: 0; border-right: 0; border-radius: 0; }
+      table { min-width: 760px; font-size: 15px; }
+      th, td { padding: 6px 7px; }
+      .sticky-col { min-width: 104px; }
+      .room-image-list { grid-template-columns: 1fr; }
+      .room-image-list img { max-height: none; }
+      .image-modal-body { padding: 8px; }
+    }
+      .public-notice { margin: 10px 0 0; padding: 10px 12px; border: 1px solid #b2ccff; border-radius: 8px; background: #eff6ff; color: #344054; line-height: 1.45; }
+    .public-notice a { color: #175cd3; font-weight: 750; text-decoration: underline; text-underline-offset: 2px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Harvest Club 相互利用 空室履歴</h1>
+    <div class="meta">
+      <span class="pill">施設数: 43</span>
+      <span class="pill">最新確認: 5/24 12時</span>
+      <span class="pill">表示自動更新: 1時間ごと</span>
+    </div>
+    <p class="public-notice">このページは空室傾向を見やすく整理したものです。予約可否の最終確認と手続きは <a href="https://my.harvestclub.com/myharvest/reservations/vacancy?viewMode=guest" target="_blank" rel="noopener">東急ハーヴェストクラブ公式ページ</a> で行ってください。</p>
+    <div class="legend">
+      <span class="sample status-full">〇</span><span>空きあり</span>
+      <span class="sample status-some">△</span><span>空き少なめ</span>
+      <span class="sample status-wait">C</span><span>キャンセル待ち</span>
+      <span class="sample status-wait">C10+</span><span>キャンセル待ち10組以上</span>
+      <span class="sample status-special">特</span><span>特定期間（空室判定外）</span>
+      <span class="sample status-closed">休</span><span>全館休業日</span>
+      <span class="sample status-none">×</span><span>空きなし</span>
+    </div>
+    <div class="header-actions">
+      <button type="button" id="toggle-log" hidden>ログ表示</button>
+      <button type="button" id="run-now" hidden>Run now</button>
+      <span class="action-status" id="action-status">公開版では取得操作はできません。</span>
+    </div>
+  </header>
+  <main>
+    <div class="toolbar">
+      <div class="controls date-controls">
+        <label for="stay-date">選択日</label>
+        <select id="stay-date"></select>
+      </div>
+    </div>
+    <section class="view-block log-panel" id="log-panel" hidden>
+      <div class="log-toolbar">
+        <h2 class="view-title">取得ログ</h2>
+      </div>
+      <div id="log-root"></div>
+    </section>
+    <section class="view-block">
+      <div class="section-title-row calendar-title-row">
+        <h2 class="view-title">空きカレンダー</h2>
+        <button type="button" class="action-button disclosure-button" id="toggle-calendar-facility-filter" aria-expanded="false">施設フィルターを開く</button>
+        <div class="calendar-window-controls">
+          <button type="button" class="action-button" id="calendar-prev-month">前の月</button>
+          <span class="calendar-window-label" id="calendar-window-label"></span>
+          <button type="button" class="action-button" id="calendar-next-month">次の月</button>
+        </div>
+      </div>
+      <div class="facility-filter-panel" id="calendar-facility-panel" hidden>
+        <fieldset class="facility-filter" id="calendar-facility-filter">
+          <legend>対象施設</legend>
+          <div class="calendar-facility-actions">
+            <button type="button" class="action-button" id="calendar-ticket-only">チケット対象のみ</button>
+            <button type="button" id="calendar-select-all">全部チェック</button>
+            <button type="button" id="calendar-clear-all">全部外す</button>
+          </div>
+          <div id="calendar-facility-options"></div>
+        </fieldset>
+      </div>
+      <div class="calendar-legend">
+        <span class="calendar-swatch available"></span><span>選択施設のいずれかに空きあり</span>
+        <span class="calendar-swatch none"></span><span>選択施設は空き0</span>
+      </div>
+      <div id="calendar-root"></div>
+    </section>
+    <section class="view-block">
+      <div class="section-title-row summary-title-row">
+        <h2 class="view-title">施設サマリー</h2>
+        <label class="inline-checkbox"><input type="checkbox" id="toggle-summary-history">履歴を表示</label>
+        <label class="inline-checkbox" id="summary-zero-label"><input type="checkbox" id="toggle-summary-zero-columns">空室がなければ施設名を非表示</label>
+      </div>
+      <p class="summary-note"><strong>表示メモ:</strong> 空欄は、その取得回では該当施設のデータがなかったことを示します。施設名をクリックすると、下の部屋タイプ詳細に反映されます。</p>
+      <div id="facility-summary-root"></div>
+    </section>
+    <section class="view-block detail-section">
+      <div class="detail-toolbar">
+        <div class="controls">
+          <label for="facility">施設</label>
+          <select id="facility"></select>
+        </div>
+        <div class="section-title-row detail-title-row">
+          <h2 class="view-title">部屋タイプ詳細</h2>
+          <div class="detail-links">
+            <a class="detail-link" id="facility-room-link" href="#" target="_blank" rel="noopener" hidden>部屋のページURL</a>
+            <a class="detail-link" id="facility-map-link" href="#" target="_blank" rel="noopener" hidden>Googleマップ</a>
+          </div>
+          <label class="inline-checkbox"><input type="checkbox" id="toggle-detail-history">履歴を表示</label>
+        </div>
+      </div>
+      <div id="table-root"></div>
+      <div id="room-images-root"></div>
+    </section>
+  </main>
+  <div class="image-modal" id="image-modal" hidden>
+    <div class="image-modal-bar">
+      <div class="image-modal-title" id="image-modal-title"></div>
+      <button type="button" class="image-modal-close" id="image-modal-close">閉じる</button>
+    </div>
+    <div class="image-modal-body" id="image-modal-body">
+      <img id="image-modal-img" src="" alt="">
+    </div>
+  </div>
+  <script src="./dashboard-data.js"></script>
+  <script>
+    const dashboard = window.__HARVEST_DASHBOARD_DATA__;
+    if (!dashboard) { throw new Error('dashboard-data-not-loaded'); }
+    const initialFacilityId = "38";
+    const initialDate = "2026-06-28";
+    const facilitySelect = document.getElementById('facility');
+    const dateSelect = document.getElementById('stay-date');
+    const facilitySummaryRoot = document.getElementById('facility-summary-root');
+    const toggleSummaryHistoryButton = document.getElementById('toggle-summary-history');
+    const toggleSummaryZeroColumnsButton = document.getElementById('toggle-summary-zero-columns');
+    const tableRoot = document.getElementById('table-root');
+    const toggleDetailHistoryButton = document.getElementById('toggle-detail-history');
+    const facilityRoomLink = document.getElementById('facility-room-link');
+    const facilityMapLink = document.getElementById('facility-map-link');
+    const roomImagesRoot = document.getElementById('room-images-root');
+    const calendarRoot = document.getElementById('calendar-root');
+    const calendarFacilityPanel = document.getElementById('calendar-facility-panel');
+    const toggleCalendarFacilityFilterButton = document.getElementById('toggle-calendar-facility-filter');
+    const calendarPrevMonthButton = document.getElementById('calendar-prev-month');
+    const calendarNextMonthButton = document.getElementById('calendar-next-month');
+    const calendarWindowLabel = document.getElementById('calendar-window-label');
+    const calendarFacilityOptions = document.getElementById('calendar-facility-options');
+    const calendarTicketOnlyButton = document.getElementById('calendar-ticket-only');
+    const calendarSelectAllButton = document.getElementById('calendar-select-all');
+    const calendarClearAllButton = document.getElementById('calendar-clear-all');
+    const toggleLogButton = document.getElementById('toggle-log');
+    const runNowButton = document.getElementById('run-now');
+    const actionStatus = document.getElementById('action-status');
+    const logPanel = document.getElementById('log-panel');
+    const logRoot = document.getElementById('log-root');
+    const imageModal = document.getElementById('image-modal');
+    const imageModalTitle = document.getElementById('image-modal-title');
+    const imageModalImg = document.getElementById('image-modal-img');
+    const imageModalClose = document.getElementById('image-modal-close');
+    const hiddenSummaryRows = new Set();
+    let hideNoAvailabilitySummaryColumns = false;
+    let showSummaryHistory = false;
+    let showDetailHistory = false;
+    const ticketEligibleHotelIds = new Set([
+      '21', '07', '03', '18', '25', '05', '09', '04', '16', '13',
+      '17:01', '17:02', '29', '01', '14', '19', '08', '27', '23'
+    ]);
+    const desktopCalendarVisibleMonths = 3;
+    const mobileCalendarVisibleMonths = 1;
+    const mobileCalendarQuery = window.matchMedia('(max-width: 760px)');
+    let calendarMonthOffset = 0;
+
+    function calendarVisibleMonthCount() {
+      return mobileCalendarQuery.matches ? mobileCalendarVisibleMonths : desktopCalendarVisibleMonths;
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;');
+    }
+    function classForStatus(value) {
+      const text = String(value ?? '').normalize('NFKC').replace(/\s+/g, '');
+      if (text.startsWith('〇') || text.startsWith('○')) return 'status-full';
+      if (text.startsWith('△')) return 'status-some';
+      if (text.startsWith('C') || text.startsWith('⊝')) return 'status-wait';
+      if (text.startsWith('×')) return 'status-none';
+      if (text.startsWith('特') || text.startsWith('☆')) return 'status-special';
+      if (text.startsWith('H') || text.startsWith('↑')) return 'status-ref';
+      if (text.startsWith('未')) return 'status-missing';
+      if (text.startsWith('休') || text.startsWith('-')) return 'status-closed';
+      return '';
+    }
+    function currentFacility() {
+      return dashboard.facilities.find((facility) => facility.hotelId === facilitySelect.value) || dashboard.facilities[0] || null;
+    }
+    function allDateEntries() {
+      const dateMap = new Map();
+      for (const facility of dashboard.facilities) {
+        for (const entry of facility.dates || []) {
+          if (!dateMap.has(entry.stayDate)) {
+            dateMap.set(entry.stayDate, { stayDate: entry.stayDate, label: entry.label });
+          }
+        }
+      }
+      return [...dateMap.values()].sort((left, right) => left.stayDate.localeCompare(right.stayDate));
+    }
+    function weekdayIndex(stayDate) {
+      const parts = String(stayDate || '').split('-').map((part) => Number(part));
+      if (parts.length !== 3 || parts.some((part) => !Number.isFinite(part))) return -1;
+      return new Date(parts[0], parts[1] - 1, parts[2]).getDay();
+    }
+    function parseDateParts(stayDate) {
+      const parts = String(stayDate || '').split('-').map((part) => Number(part));
+      return parts.length === 3 && parts.every((part) => Number.isFinite(part)) ? parts : null;
+    }
+    function monthKey(stayDate) {
+      return String(stayDate || '').slice(0, 7);
+    }
+    function monthLabel(key) {
+      const parts = parseDateParts(key + '-01');
+      if (!parts) return key;
+      return parts[0] + '年' + parts[1] + '月';
+    }
+    function shortMonthLabel(key) {
+      const parts = parseDateParts(key + '-01');
+      if (!parts) return key;
+      return parts[1] + '月';
+    }
+    function holidayName(stayDate) {
+      return dashboard.holidays?.[stayDate] || '';
+    }
+    function logRows() {
+      const rowMap = new Map();
+      for (const check of dashboard.checks || []) {
+        const key = [check.checkedAtIso || '', check.mode || '', check.startDate || '', check.endDate || ''].join('|');
+        if (!rowMap.has(key)) {
+          rowMap.set(key, {
+            key,
+            checkedAtLabel: check.checkedAtLabel || check.checkedAtJst || '',
+            checkedAtJst: check.checkedAtJst || '',
+            mode: check.mode || '',
+            startDate: check.startDate || '',
+            endDate: check.endDate || '',
+            useTypes: new Set(),
+            facilities: new Set(),
+            requestCount: 0,
+            recordCount: 0
+          });
+        }
+        const row = rowMap.get(key);
+        if (check.useType) row.useTypes.add(check.useType);
+        if (check.hotelId) row.facilities.add(check.hotelId);
+        row.requestCount += Number(check.requestCount || 0);
+        row.recordCount += Number(check.recordCount || 0);
+      }
+      return [...rowMap.values()].sort((left, right) => String(right.key).localeCompare(String(left.key)));
+    }
+    function requestErrorRows() {
+      const rowMap = new Map();
+      for (const error of dashboard.requestErrors || []) {
+        const key = [error.hotelId, error.hotelName, error.message].join('::');
+        if (!rowMap.has(key)) {
+          rowMap.set(key, {
+            hotelId: error.hotelId || '',
+            hotelName: error.hotelName || '',
+            message: error.message || '',
+            requestStartDates: new Set()
+          });
+        }
+        if (error.requestStartDate) rowMap.get(key).requestStartDates.add(error.requestStartDate);
+      }
+      return [...rowMap.values()];
+    }
+    function renderLogPanel() {
+      const rows = logRows();
+      if (rows.length === 0) {
+        logRoot.innerHTML = '<div class="empty">取得ログがありません。</div>';
+        return;
+      }
+      const header = '<th>確認日時</th><th>種別</th><th>期間</th><th>利用区分</th><th>施設数</th><th>要求</th><th>記録</th>';
+      const body = rows.map((row) => {
+        const period = [row.startDate, row.endDate].filter(Boolean).join(' - ');
+        return '<tr>' +
+          '<td>' + escapeHtml(row.checkedAtLabel || row.checkedAtJst) + '</td>' +
+          '<td>' + escapeHtml(row.mode) + '</td>' +
+          '<td>' + escapeHtml(period) + '</td>' +
+          '<td>' + escapeHtml([...row.useTypes].join(' / ')) + '</td>' +
+          '<td class="num">' + escapeHtml(row.facilities.size) + '</td>' +
+          '<td class="num">' + escapeHtml(row.requestCount) + '</td>' +
+          '<td class="num">' + escapeHtml(row.recordCount) + '</td>' +
+          '</tr>';
+      }).join('');
+      const requestErrors = requestErrorRows();
+      const errorBlock = requestErrors.length === 0 ? '' : '<h3 class="view-title">取得不能施設</h3><div class="summary"><span class="pill">部屋別APIが失敗した施設です。該当施設のセルは空欄になります。</span></div><div class="table-wrap"><table><thead><tr><th>施設</th><th>対象ブロック</th><th>内容</th></tr></thead><tbody>' + requestErrors.map((error) => (
+        '<tr><td>' + escapeHtml(error.hotelName || error.hotelId) + '</td><td>' + escapeHtml([...error.requestStartDates].join(', ')) + '</td><td>' + escapeHtml(error.message.replace(/\s+/g, ' ').slice(0, 180)) + '</td></tr>'
+      )).join('') + '</tbody></table></div>';
+      logRoot.innerHTML = '<div class="table-wrap"><table><thead><tr>' + header + '</tr></thead><tbody>' + body + '</tbody></table></div>' + errorBlock;
+    }
+    function roomImageData(facility) {
+      if (!facility) return null;
+      const facilities = dashboard.roomImages?.facilities || {};
+      return facilities[facility.hotelId] || facilities[String(facility.apiHotelId || '')] || null;
+    }
+    function renderRoomImages(facility) {
+      const imageData = roomImageData(facility);
+      const rooms = Array.isArray(imageData?.rooms) ? imageData.rooms.filter((room) => Array.isArray(room.images) && room.images.length > 0) : [];
+      if (rooms.length === 0) {
+        roomImagesRoot.innerHTML = '<div class="room-images-block empty">この施設の部屋画像はまだ取得されていません。</div>';
+        return;
+      }
+      const cards = rooms.map((room) => {
+        const images = room.images.map((image) => (
+          '<button type="button" class="room-image-button" data-image-src="' + escapeHtml(image.localPath || '') + '" data-image-title="' + escapeHtml(room.roomName || '部屋画像') + '">' +
+          '<img src="' + escapeHtml(image.localPath || '') + '" alt="' + escapeHtml(room.roomName || '部屋画像') + '" loading="lazy">' +
+          '</button>'
+        )).join('');
+        return '<article class="room-image-card">' +
+          '<div class="room-image-title">' + escapeHtml(room.roomName || '部屋タイプ') + '</div>' +
+          '<div class="room-image-list">' + images + '</div>' +
+          '</article>';
+      }).join('');
+      roomImagesRoot.innerHTML = '<section class="room-images-block"><h3 class="view-title">部屋画像</h3><div class="room-image-grid">' + cards + '</div></section>';
+    }
+    function renderFacilityRoomLink(facility) {
+      const sourceUrl = roomImageData(facility)?.sourceUrl || '';
+      if (sourceUrl) {
+        facilityRoomLink.hidden = false;
+        facilityRoomLink.href = sourceUrl;
+        facilityRoomLink.title = sourceUrl;
+      } else {
+        facilityRoomLink.hidden = true;
+        facilityRoomLink.removeAttribute('href');
+        facilityRoomLink.removeAttribute('title');
+      }
+
+      const mapQuery = facility ? ('東急ハーヴェストクラブ ' + (facility.hotelName || facility.hotelShortName || '')).trim() : '';
+      const mapUrl = mapQuery ? 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(mapQuery) : '';
+      if (!mapUrl) {
+        facilityMapLink.hidden = true;
+        facilityMapLink.removeAttribute('href');
+        facilityMapLink.removeAttribute('title');
+      } else {
+        facilityMapLink.hidden = false;
+        facilityMapLink.href = mapUrl;
+        facilityMapLink.title = mapQuery;
+      }
+    }
+    function openImageModal(src, title) {
+      if (!src) return;
+      imageModalImg.src = src;
+      imageModalImg.alt = title || '部屋画像';
+      imageModalTitle.textContent = title || '部屋画像';
+      imageModal.hidden = false;
+    }
+    function closeImageModal() {
+      imageModal.hidden = true;
+      imageModalImg.removeAttribute('src');
+      imageModalImg.alt = '';
+      imageModalTitle.textContent = '';
+    }
+    async function runNow() {
+      actionStatus.textContent = '即時取得を要求しています...';
+      runNowButton.disabled = true;
+      try {
+        if (window.location.protocol === 'file:') throw new Error('server-required');
+        const response = await fetch('/run-mutual-range-now', { method: 'POST' });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || payload.ok === false) throw new Error(payload.message || 'request-failed');
+        actionStatus.textContent = payload.running ? '取得中です。完了後にページを更新してください。' : '取得が完了しました。更新します...';
+        if (!payload.running) window.setTimeout(() => window.location.reload(), 1200);
+      } catch {
+        actionStatus.textContent = '即時取得にはローカル実行サーバー経由の表示が必要です。';
+      } finally {
+        runNowButton.disabled = false;
+      }
+    }
+    function fillDates(preferredDate) {
+      dateSelect.innerHTML = '';
+      const dates = allDateEntries();
+      for (const entry of dates) {
+        const option = document.createElement('option');
+        option.value = entry.stayDate;
+        option.textContent = entry.label;
+        dateSelect.appendChild(option);
+      }
+      const nextDate = dates.some((entry) => entry.stayDate === preferredDate) ? preferredDate : (dates[0]?.stayDate || '');
+      dateSelect.value = nextDate;
+      syncCalendarWindowToDate(nextDate);
+    }
+    function selectedCalendarFacilityIds() {
+      const checked = [...document.querySelectorAll('[data-calendar-hotel-id]:checked')]
+        .map((input) => input.dataset.calendarHotelId)
+        .filter(Boolean);
+      return new Set(checked);
+    }
+    function selectedCalendarFacilities() {
+      const selectedIds = selectedCalendarFacilityIds();
+      return dashboard.facilities.filter((facility) => selectedIds.has(facility.hotelId));
+    }
+    function setCalendarFacilityChecks(checked) {
+      document.querySelectorAll('[data-calendar-hotel-id]').forEach((input) => {
+        input.checked = checked;
+      });
+      renderCalendar();
+      renderFacilitySummary(dateSelect.value);
+    }
+    function setCalendarFacilityChecksByIds(hotelIds) {
+      document.querySelectorAll('[data-calendar-hotel-id]').forEach((input) => {
+        input.checked = hotelIds.has(input.dataset.calendarHotelId || '');
+      });
+      renderCalendar();
+      renderFacilitySummary(dateSelect.value);
+    }
+    function renderCalendarDependentViews() {
+      renderCalendar();
+      renderFacilitySummary(dateSelect.value);
+    }
+    function facilityDisplayName(facility) {
+      return facility.hotelShortName || facility.hotelName || facility.hotelId;
+    }
+    function facilityGroupName(facility) {
+      const hotelId = String(facility.hotelId || '');
+      const text = (facility.hotelName + ' ' + facility.hotelShortName + ' ' + facility.series).normalize('NFKC');
+      const areaByHotelId = new Map([
+        ['21', '東北・北関東'], ['31', '東北・北関東'], ['07', '東北・北関東'], ['32', '東北・北関東'], ['87', '東北・北関東'], ['88', '東北・北関東'], ['89', '東北・北関東'],
+        ['03', '関東'], ['18', '関東'], ['22', '関東'], ['37', '関東'], ['38', '関東'],
+        ['25', '東海'], ['26', '東海'], ['05', '東海'], ['09', '東海'], ['06', '東海'], ['04', '東海'], ['35', '東海'], ['95', '東海'],
+        ['16', '甲信'], ['17:01', '甲信'], ['17:02', '甲信'], ['29', '甲信'], ['30', '甲信'], ['34', '甲信'], ['13', '甲信'], ['01', '甲信'], ['14', '甲信'], ['19', '甲信'], ['91', '甲信'], ['93', '甲信'], ['94', '甲信'],
+        ['08', '関西'], ['27', '関西'], ['28', '関西'], ['23', '関西'], ['24', '関西'], ['33', '関西'], ['90', '関西'], ['NT', '関西'],
+        ['15', '北陸'], ['39', '沖縄']
+      ]);
+      if (areaByHotelId.has(hotelId)) return areaByHotelId.get(hotelId);
+      const groups = [
+        ['東北・北関東', ['那須', '鬼怒川', '草津']],
+        ['関東', ['勝浦', '箱根', '湖悠', '翡翠', '明神平']],
+        ['東海', ['熱海', '伊豆山', '天城', '伊東', '静波', '浜名湖', '飛騨', '高山', '三養荘']],
+        ['甲信', ['山中湖', '軽井沢', '旧軽井沢', '浅間', '斑尾', '蓼科', 'タングラム']],
+        ['関西', ['南紀', '田辺', '京都', '鷹峯', '東山', '有馬', '志摩']],
+        ['北陸', ['勝山', 'スキージャム']],
+        ['沖縄', ['宮古島']],
+        ['その他', []]
+      ];
+      return groups.find(([, words]) => words.some((word) => text.includes(word)))?.[0] || 'その他';
+    }
+    function groupedFacilities() {
+      const order = ['東北・北関東', '関東', '東海', '甲信', '関西', '北陸', '沖縄', 'その他'];
+      const groupMap = new Map(order.map((name) => [name, []]));
+      for (const facility of dashboard.facilities) {
+        const groupName = facilityGroupName(facility);
+        if (!groupMap.has(groupName)) groupMap.set(groupName, []);
+        groupMap.get(groupName).push(facility);
+      }
+      return [...groupMap.entries()].filter(([, facilities]) => facilities.length > 0);
+    }
+    function latestCheckForDate(facility, stayDate) {
+      const entry = (facility.dates || []).find((candidate) => candidate.stayDate === stayDate);
+      return entry?.checks?.[0] || null;
+    }
+    function calendarStats(stayDate, selectedIds) {
+      const availableFacilities = [];
+      let dataCount = 0;
+      let totalAvailable = 0;
+      for (const facility of dashboard.facilities) {
+        if (!selectedIds.has(facility.hotelId)) continue;
+        const check = latestCheckForDate(facility, stayDate);
+        if (!check) continue;
+        dataCount += 1;
+        const availableCount = Number(check.availableCount || 0);
+        if (availableCount > 0) {
+          totalAvailable += availableCount;
+          availableFacilities.push((facility.hotelShortName || facility.hotelName) + ': ' + availableCount);
+        }
+      }
+      return { dataCount, totalAvailable, availableFacilities };
+    }
+    function calendarMonthEntries() {
+      const months = new Map();
+      for (const entry of allDateEntries()) {
+        const key = monthKey(entry.stayDate);
+        if (!months.has(key)) months.set(key, []);
+        months.get(key).push(entry);
+      }
+      return [...months.entries()];
+    }
+    function maxCalendarMonthOffset(monthEntries) {
+      return Math.max(0, monthEntries.length - calendarVisibleMonthCount());
+    }
+    function clampCalendarMonthOffset(monthEntries) {
+      calendarMonthOffset = Math.max(0, Math.min(calendarMonthOffset, maxCalendarMonthOffset(monthEntries)));
+    }
+    function syncCalendarWindowToDate(stayDate) {
+      const entries = calendarMonthEntries();
+      const index = entries.findIndex(([key]) => key === monthKey(stayDate));
+      if (index < 0) return;
+      const visibleMonthCount = calendarVisibleMonthCount();
+      if (index < calendarMonthOffset) calendarMonthOffset = index;
+      if (index >= calendarMonthOffset + visibleMonthCount) calendarMonthOffset = Math.min(index, maxCalendarMonthOffset(entries));
+      clampCalendarMonthOffset(entries);
+    }
+    function updateCalendarWindowControls(monthEntries, visibleEntries) {
+      const first = visibleEntries[0]?.[0] || '';
+      const last = visibleEntries[visibleEntries.length - 1]?.[0] || '';
+      calendarWindowLabel.textContent = first && last ? (first === last ? shortMonthLabel(first) : shortMonthLabel(first) + ' - ' + shortMonthLabel(last)) : '';
+      calendarPrevMonthButton.disabled = calendarMonthOffset <= 0;
+      calendarNextMonthButton.disabled = calendarMonthOffset >= maxCalendarMonthOffset(monthEntries);
+    }
+    function renderCalendar() {
+      const monthEntries = calendarMonthEntries();
+      if (monthEntries.length === 0) {
+        calendarRoot.innerHTML = '<div class="empty">表示できる日付データがありません。</div>';
+        updateCalendarWindowControls([], []);
+        return;
+      }
+      clampCalendarMonthOffset(monthEntries);
+      const selectedIds = selectedCalendarFacilityIds();
+      const visibleMonthEntries = monthEntries.slice(calendarMonthOffset, calendarMonthOffset + calendarVisibleMonthCount());
+      updateCalendarWindowControls(monthEntries, visibleMonthEntries);
+      const weekdayHeader = ["日","月","火","水","木","金","土"].map((weekday, index) => '<div class="calendar-weekday calendar-weekday-' + index + '">' + escapeHtml(weekday) + '</div>').join('');
+      const monthBlocks = visibleMonthEntries.map(([key, entries]) => {
+        const firstParts = parseDateParts(key + '-01');
+        const leading = firstParts ? new Date(firstParts[0], firstParts[1] - 1, 1).getDay() : 0;
+        const leadingCells = Array.from({ length: leading }, () => '<div class="calendar-empty-cell"></div>').join('');
+        const dayCells = entries.map((entry) => {
+          const parts = parseDateParts(entry.stayDate);
+          const day = parts ? parts[2] : entry.label;
+          const weekday = parts ? new Date(parts[0], parts[1] - 1, parts[2]).getDay() : -1;
+          const holiday = holidayName(entry.stayDate);
+          const stats = calendarStats(entry.stayDate, selectedIds);
+          const stateClass = stats.dataCount === 0 ? 'no-data' : (stats.totalAvailable > 0 ? 'has-available' : 'has-none');
+          const selectedClass = entry.stayDate === dateSelect.value ? ' is-selected' : '';
+          const weekdayClass = weekday === 0 ? ' is-sunday' : (weekday === 6 ? ' is-saturday' : '');
+          const holidayClass = holiday ? ' is-holiday' : '';
+          const countLabel = stats.totalAvailable > 0 ? String(stats.totalAvailable) : (stats.dataCount > 0 ? '0' : '');
+          const countClass = stats.totalAvailable > 0 ? ' calendar-count-positive' : (stats.dataCount > 0 ? ' calendar-count-zero' : '');
+          const holidayBadge = holiday ? '<span class="holiday-badge" title="' + escapeHtml(holiday) + '">祝</span>' : '';
+          const title = stats.availableFacilities.length > 0 ? stats.availableFacilities.join(' / ') : (stats.dataCount > 0 ? '空き0' : 'データなし');
+          return '<button type="button" class="calendar-day ' + stateClass + selectedClass + weekdayClass + holidayClass + '" data-stay-date="' + escapeHtml(entry.stayDate) + '" title="' + escapeHtml(title) + '">' +
+            '<span class="calendar-date">' + escapeHtml(day) + holidayBadge + '</span>' +
+            '<span class="calendar-count' + countClass + '">' + escapeHtml(countLabel) + '</span>' +
+            '</button>';
+        }).join('');
+        return '<section class="calendar-month"><h3 class="calendar-month-title">' + escapeHtml(monthLabel(key)) + '</h3><div class="calendar-grid">' + weekdayHeader + leadingCells + dayCells + '</div></section>';
+      }).join('');
+      calendarRoot.innerHTML = '<div class="calendar-months">' + monthBlocks + '</div>';
+    }
+    function renderFacilitySummary(stayDate) {
+      const summaryFacilities = selectedCalendarFacilities();
+      if (summaryFacilities.length === 0) {
+        facilitySummaryRoot.innerHTML = '<div class="empty">対象施設が選択されていません。</div>';
+        updateSummaryHistoryButton(0);
+        updateSummaryZeroColumnsButton(0);
+        return;
+      }
+      const rowMap = new Map();
+      for (const facility of summaryFacilities) {
+        const entry = (facility.dates || []).find((candidate) => candidate.stayDate === stayDate);
+        for (const check of entry?.checks || []) {
+          const key = check.checkedAtIso || check.checkedAtJst || check.checkId;
+          if (!rowMap.has(key)) {
+            rowMap.set(key, {
+              key,
+              checkedAtLabel: check.checkedAtLabel || check.checkedAtJst || '',
+              values: {}
+            });
+          }
+          rowMap.get(key).values[facility.hotelId] = check.availableCount;
+        }
+      }
+      const rows = [...rowMap.values()]
+        .filter((row) => !hiddenSummaryRows.has(row.key))
+        .sort((left, right) => String(right.key).localeCompare(String(left.key)));
+      if (rows.length === 0) {
+        facilitySummaryRoot.innerHTML = '<div class="empty">' + (rowMap.size > 0 ? 'この選択日の取得履歴はすべて非表示です。' : '取得履歴がまだありません。') + '</div>';
+        updateSummaryHistoryButton(0);
+        updateSummaryZeroColumnsButton(0);
+        return;
+      }
+      const noAvailabilityFacilityIds = new Set(summaryFacilities
+        .filter((facility) => !rows.some((row) => Number(row.values[facility.hotelId] || 0) > 0))
+        .map((facility) => facility.hotelId));
+      const visibleSummaryFacilities = hideNoAvailabilitySummaryColumns
+        ? summaryFacilities.filter((facility) => !noAvailabilityFacilityIds.has(facility.hotelId))
+        : summaryFacilities;
+      updateSummaryZeroColumnsButton(noAvailabilityFacilityIds.size);
+      updateSummaryHistoryButton(rows.length);
+      if (visibleSummaryFacilities.length === 0) {
+        facilitySummaryRoot.innerHTML = '<div class="empty">空室なしの施設列を非表示中です。</div>';
+        return;
+      }
+      const displayRows = showSummaryHistory ? rows : rows.slice(0, 1);
+      const header = [
+        '<th class="sticky-col">確認日時</th>',
+        ...visibleSummaryFacilities.map((facility) => (
+          '<th class="facility-col' + (facility.hotelId === facilitySelect.value ? ' is-selected' : '') + '" title="' + escapeHtml(facility.hotelName) + '">' +
+          '<button type="button" class="facility-jump' + (facility.hotelId === facilitySelect.value ? ' is-selected' : '') + '" data-hotel-id="' + escapeHtml(facility.hotelId) + '">' +
+          escapeHtml(facilityDisplayName(facility)) +
+          '</button></th>'
+        ))
+      ].join('');
+      const body = displayRows.map((row) => {
+        const cells = visibleSummaryFacilities.map((facility) => {
+          const value = row.values[facility.hotelId];
+          if (value === undefined || value === null || value === '') return '<td></td>';
+          const numberValue = Number(value);
+          const klass = numberValue > 0 ? 'availability-positive' : 'availability-zero';
+          const cellKlass = numberValue > 0 ? 'availability-cell-positive' : 'availability-cell-zero';
+          return '<td class="' + cellKlass + '"><span class="availability-count ' + klass + '">' + escapeHtml(value) + '</span></td>';
+        }).join('');
+        return '<tr><td class="sticky-col"><button type="button" class="row-action summary-row-hide" data-row-key="' + escapeHtml(row.key) + '">非表示</button> ' + escapeHtml(row.checkedAtLabel) + '</td>' + cells + '</tr>';
+      }).join('');
+      facilitySummaryRoot.innerHTML = '<div class="table-wrap"><table><thead><tr>' + header + '</tr></thead><tbody>' + body + '</tbody></table></div>';
+    }
+    function updateSummaryHistoryButton(count) {
+      toggleSummaryHistoryButton.checked = showSummaryHistory;
+      toggleSummaryHistoryButton.disabled = count <= 1;
+      toggleSummaryHistoryButton.title = count > 1 ? '施設サマリーの過去の確認行を表示します' : '表示できる過去履歴がありません';
+    }
+    function updateSummaryZeroColumnsButton(hiddenCandidateCount) {
+      toggleSummaryZeroColumnsButton.checked = hideNoAvailabilitySummaryColumns;
+      toggleSummaryZeroColumnsButton.disabled = !hideNoAvailabilitySummaryColumns && hiddenCandidateCount === 0;
+      toggleSummaryZeroColumnsButton.title = hiddenCandidateCount > 0 ? '選択日の履歴内で空室がない施設列: ' + hiddenCandidateCount + '件' : '空室なしの施設列はありません';
+      document.getElementById('summary-zero-label').title = toggleSummaryZeroColumnsButton.title;
+    }
+    function updateDetailHistoryButton(count) {
+      toggleDetailHistoryButton.checked = showDetailHistory;
+      toggleDetailHistoryButton.disabled = count <= 1;
+      toggleDetailHistoryButton.title = count > 1 ? '過去の確認行を表示します' : '表示できる過去履歴がありません';
+    }
+    function render() {
+      const facility = currentFacility();
+      const entry = facility?.dates.find((candidate) => candidate.stayDate === dateSelect.value);
+      renderCalendar();
+      renderFacilitySummary(dateSelect.value);
+      renderFacilityRoomLink(facility);
+      if (!facility || !entry) {
+        tableRoot.innerHTML = '<div class="empty">表示できるデータがありません。</div>';
+        renderRoomImages(facility);
+        updateDetailHistoryButton(0);
+        return;
+      }
+      if (entry.checks.length === 0 || entry.roomTypes.length === 0) {
+        tableRoot.innerHTML = '<div class="empty">この選択日の取得データはまだありません。</div>';
+        renderRoomImages(facility);
+        updateDetailHistoryButton(entry.checks.length);
+        return;
+      }
+      updateDetailHistoryButton(entry.checks.length);
+      const header = [
+        '<th class="sticky-col">確認日時</th>',
+        '<th class="num">空き</th>',
+        ...entry.roomTypes.map((room) => '<th class="room" title="' + escapeHtml(room) + '">' + escapeHtml(room) + '</th>')
+      ].join('');
+      const visibleChecks = showDetailHistory ? entry.checks : entry.checks.slice(0, 1);
+      const rows = visibleChecks.map((check) => {
+        const cells = entry.roomTypes.map((room) => {
+          const value = check.values[room] || null;
+          const status = value ? value.status : '';
+          const title = value ? (value.title || [value.statusRaw, value.additionalText].filter(Boolean).join(' ')) : '';
+          return '<td><span class="status ' + classForStatus(status) + '" title="' + escapeHtml(title) + '">' + escapeHtml(status) + '</span></td>';
+        }).join('');
+        return '<tr><td class="sticky-col" title="' + escapeHtml(check.checkedAtJst || check.checkedAtIso || '') + '">' + escapeHtml(check.checkedAtLabel) + '</td><td class="num">' + escapeHtml(check.availableCount) + '</td>' + cells + '</tr>';
+      }).join('');
+      tableRoot.innerHTML = '<div class="table-wrap"><table><thead><tr>' + header + '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+      renderRoomImages(facility);
+    }
+
+    for (const facility of dashboard.facilities) {
+      const option = document.createElement('option');
+      option.value = facility.hotelId;
+      option.textContent = facility.hotelName + ' [' + facility.hotelId + ']';
+      facilitySelect.appendChild(option);
+    }
+    for (const [groupName, facilities] of groupedFacilities()) {
+      const group = document.createElement('div');
+      group.className = 'facility-group';
+      const title = document.createElement('div');
+      title.className = 'facility-group-title';
+      title.textContent = groupName;
+      const options = document.createElement('div');
+      options.className = 'facility-group-options';
+      for (const facility of facilities) {
+        const calendarLabel = document.createElement('label');
+        calendarLabel.className = 'facility-option';
+        const calendarInput = document.createElement('input');
+        calendarInput.type = 'checkbox';
+        calendarInput.dataset.calendarHotelId = facility.hotelId;
+        calendarInput.checked = true;
+        calendarInput.addEventListener('change', renderCalendarDependentViews);
+        calendarLabel.appendChild(calendarInput);
+        calendarLabel.appendChild(document.createTextNode(facilityDisplayName(facility)));
+        options.appendChild(calendarLabel);
+      }
+      group.appendChild(title);
+      group.appendChild(options);
+      calendarFacilityOptions.appendChild(group);
+    }
+    facilitySelect.value = initialFacilityId || (dashboard.facilities[0]?.hotelId || '');
+    fillDates(initialDate);
+    facilitySelect.addEventListener('change', () => { showDetailHistory = false; render(); });
+    dateSelect.addEventListener('change', () => { syncCalendarWindowToDate(dateSelect.value); showSummaryHistory = false; showDetailHistory = false; render(); });
+    toggleSummaryHistoryButton.addEventListener('change', () => {
+      showSummaryHistory = toggleSummaryHistoryButton.checked;
+      renderFacilitySummary(dateSelect.value);
+    });
+    toggleDetailHistoryButton.addEventListener('change', () => {
+      showDetailHistory = toggleDetailHistoryButton.checked;
+      render();
+    });
+    toggleSummaryZeroColumnsButton.addEventListener('change', () => {
+      hideNoAvailabilitySummaryColumns = toggleSummaryZeroColumnsButton.checked;
+      renderFacilitySummary(dateSelect.value);
+    });
+    toggleCalendarFacilityFilterButton.addEventListener('click', () => {
+      const nextHidden = !calendarFacilityPanel.hidden;
+      calendarFacilityPanel.hidden = nextHidden;
+      toggleCalendarFacilityFilterButton.setAttribute('aria-expanded', String(!nextHidden));
+      toggleCalendarFacilityFilterButton.textContent = nextHidden ? '施設フィルターを開く' : '施設フィルターを閉じる';
+    });
+    calendarSelectAllButton.addEventListener('click', () => setCalendarFacilityChecks(true));
+    calendarClearAllButton.addEventListener('click', () => setCalendarFacilityChecks(false));
+    calendarTicketOnlyButton.addEventListener('click', () => setCalendarFacilityChecksByIds(ticketEligibleHotelIds));
+    calendarPrevMonthButton.addEventListener('click', () => {
+      calendarMonthOffset = Math.max(0, calendarMonthOffset - 1);
+      renderCalendar();
+    });
+    calendarNextMonthButton.addEventListener('click', () => {
+      const entries = calendarMonthEntries();
+      calendarMonthOffset = Math.min(maxCalendarMonthOffset(entries), calendarMonthOffset + 1);
+      renderCalendar();
+    });
+    const handleCalendarViewportChange = () => {
+      syncCalendarWindowToDate(dateSelect.value);
+      renderCalendar();
+    };
+    if (typeof mobileCalendarQuery.addEventListener === 'function') {
+      mobileCalendarQuery.addEventListener('change', handleCalendarViewportChange);
+    } else if (typeof mobileCalendarQuery.addListener === 'function') {
+      mobileCalendarQuery.addListener(handleCalendarViewportChange);
+    }
+    toggleLogButton.addEventListener('click', () => {
+      logPanel.hidden = !logPanel.hidden;
+      toggleLogButton.textContent = logPanel.hidden ? 'ログ表示' : 'ログを閉じる';
+      if (!logPanel.hidden) renderLogPanel();
+    });
+    runNowButton.addEventListener('click', runNow);
+    roomImagesRoot.addEventListener('click', (event) => {
+      const button = event.target instanceof Element ? event.target.closest('.room-image-button') : null;
+      if (!button) return;
+      openImageModal(button.dataset.imageSrc || '', button.dataset.imageTitle || '');
+    });
+    imageModalClose.addEventListener('click', closeImageModal);
+    imageModal.addEventListener('click', (event) => {
+      if (event.target === imageModal || event.target.id === 'image-modal-body') closeImageModal();
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && !imageModal.hidden) closeImageModal();
+    });
+    facilitySummaryRoot.addEventListener('click', (event) => {
+      const hideButton = event.target instanceof Element ? event.target.closest('.summary-row-hide') : null;
+      if (hideButton) {
+        const rowKey = hideButton.dataset.rowKey || '';
+        if (rowKey) {
+          hiddenSummaryRows.add(rowKey);
+          renderFacilitySummary(dateSelect.value);
+        }
+        return;
+      }
+      const button = event.target instanceof Element ? event.target.closest('.facility-jump') : null;
+      if (!button) return;
+      const hotelId = button.dataset.hotelId || '';
+      if (!hotelId) return;
+      if (facilitySelect.value !== hotelId) {
+        const currentScrollX = window.scrollX;
+        const currentScrollY = window.scrollY;
+        facilitySelect.value = hotelId;
+        showDetailHistory = false;
+        render();
+        window.scrollTo(currentScrollX, currentScrollY);
+      }
+    });
+    calendarRoot.addEventListener('click', (event) => {
+      const button = event.target instanceof Element ? event.target.closest('.calendar-day') : null;
+      if (!button) return;
+      const stayDate = button.dataset.stayDate || '';
+      if (!stayDate) return;
+      dateSelect.value = stayDate;
+      syncCalendarWindowToDate(stayDate);
+      showSummaryHistory = false;
+      showDetailHistory = false;
+      render();
+    });
+    render();
+  </script>
+</body>
+</html>
+
