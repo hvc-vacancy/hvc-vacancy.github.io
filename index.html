@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="ja">
 <head>
   <meta charset="utf-8">
@@ -215,7 +215,7 @@
     <h1>Harvest Club 相互利用 空室履歴</h1>
     <div class="meta">
       <span class="pill">施設数: 43</span>
-      <span class="pill">最新確認: 5/25 0時</span>
+      <span class="pill">最新確認: 5/25 6時</span>
       <span class="pill">表示自動更新: 1時間ごと</span>
     </div>
     <p class="public-notice">このページは空室傾向を見やすく整理したものです。予約可否の最終確認と手続きは <a href="https://my.harvestclub.com/myharvest/reservations/vacancy?viewMode=guest" target="_blank" rel="noopener">東急ハーヴェストクラブ公式ページ</a> で行ってください。</p>
@@ -224,6 +224,7 @@
       <span class="sample status-some">△</span><span>空き少なめ</span>
       <span class="sample status-wait">C</span><span>キャンセル待ち</span>
       <span class="sample status-wait">C10+</span><span>キャンセル待ち10組以上</span>
+      <span class="sample status-ref">参△</span><span>ホーム利用参考（空室数に含めない）</span>
       <span class="sample status-special">特</span><span>特定期間（空室判定外）</span>
       <span class="sample status-closed">休</span><span>全館休業日</span>
       <span class="sample status-none">×</span><span>空きなし</span>
@@ -316,7 +317,7 @@
     const dashboard = window.__HARVEST_DASHBOARD_DATA__;
     if (!dashboard) { throw new Error('dashboard-data-not-loaded'); }
     const initialFacilityId = "38";
-    const initialDate = "2026-06-28";
+    const initialDate = "2026-06-03";
     const isPublicDashboard = dashboard.publicMode === true;
     if (isPublicDashboard) document.documentElement.classList.add('public-dashboard');
     const facilitySelect = document.getElementById('facility');
@@ -375,7 +376,7 @@
       if (text.startsWith('C') || text.startsWith('⊝')) return 'status-wait';
       if (text.startsWith('×')) return 'status-none';
       if (text.startsWith('特') || text.startsWith('☆')) return 'status-special';
-      if (text.startsWith('H') || text.startsWith('↑')) return 'status-ref';
+      if (text.startsWith('参') || text.startsWith('H') || text.startsWith('↑')) return 'status-ref';
       if (text.startsWith('未')) return 'status-missing';
       if (text.startsWith('休') || text.startsWith('-')) return 'status-closed';
       return '';
@@ -765,8 +766,9 @@
         updateSummaryZeroColumnsButton(0);
         return;
       }
+      const latestSummaryRow = rows[0];
       const noAvailabilityFacilityIds = new Set(summaryFacilities
-        .filter((facility) => !rows.some((row) => Number(row.values[facility.hotelId] || 0) > 0))
+        .filter((facility) => Number(latestSummaryRow.values[facility.hotelId] || 0) <= 0)
         .map((facility) => facility.hotelId));
       const visibleSummaryFacilities = hideNoAvailabilitySummaryColumns
         ? summaryFacilities.filter((facility) => !noAvailabilityFacilityIds.has(facility.hotelId))
@@ -812,7 +814,7 @@
     function updateSummaryZeroColumnsButton(hiddenCandidateCount) {
       toggleSummaryZeroColumnsButton.checked = hideNoAvailabilitySummaryColumns;
       toggleSummaryZeroColumnsButton.disabled = !hideNoAvailabilitySummaryColumns && hiddenCandidateCount === 0;
-      toggleSummaryZeroColumnsButton.title = hiddenCandidateCount > 0 ? '選択日の履歴内で空室がない施設列: ' + hiddenCandidateCount + '件' : '空室なしの施設列はありません';
+      toggleSummaryZeroColumnsButton.title = hiddenCandidateCount > 0 ? '最新取得回で空室がない施設列: ' + hiddenCandidateCount + '件' : '最新取得回で空室なしの施設列はありません';
       document.getElementById('summary-zero-label').title = toggleSummaryZeroColumnsButton.title;
     }
     function updateDetailHistoryButton(count) {
