@@ -194,15 +194,13 @@
       th, td { padding: 6px 7px; }
       .sticky-col { min-width: 104px; }
       .public-dashboard .sticky-col { width: 74px; min-width: 74px; max-width: 74px; white-space: normal; }
-      .public-dashboard .summary-table-wrap { margin-left: 0; margin-right: 0; overflow: visible; border: 0; border-radius: 0; background: transparent; }
-      .public-dashboard .summary-table { display: block; width: 100%; min-width: 0; font-size: 15px; }
-      .public-dashboard .summary-table thead { display: none; }
-      .public-dashboard .summary-table tbody { display: grid; gap: 8px; }
-      .public-dashboard .summary-table tr { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: #ffffff; }
-      .public-dashboard .summary-table td { position: static; display: flex; min-width: 0; min-height: 48px; align-items: center; justify-content: center; padding: 6px; border: 1px solid #e4e7ec; border-radius: 6px; text-align: center; white-space: normal; }
-      .public-dashboard .summary-table .summary-time-col { grid-column: 1 / -1; display: block; width: auto; max-width: none; min-height: 0; padding: 0 0 2px; border: 0; background: transparent; color: #344054; font-weight: 700; text-align: left; }
-      .public-dashboard .summary-value-cell::before { content: attr(data-label); display: block; max-width: 100%; margin-bottom: 3px; overflow: hidden; color: var(--muted); font-size: 12px; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
-      .public-dashboard .summary-value-cell { flex-direction: column; }
+      .public-dashboard .summary-table { min-width: 0; width: max-content; font-size: 14px; }
+      .public-dashboard .summary-table th, .public-dashboard .summary-table td { padding: 5px 4px; }
+      .public-dashboard .summary-table .summary-time-col { width: 66px; min-width: 66px; max-width: 66px; font-size: 13px; line-height: 1.25; }
+      .public-dashboard .summary-table .facility-col { min-width: 54px; max-width: 54px; width: 54px; }
+      .public-dashboard .summary-table .facility-jump { display: block; width: 100%; max-width: 46px; overflow: hidden; font-size: 12px; line-height: 1.15; text-overflow: ellipsis; white-space: normal; text-decoration: none; }
+      .public-dashboard .summary-table .summary-value-cell { min-width: 54px; width: 54px; height: 38px; padding: 4px; }
+      .public-dashboard .summary-table .availability-count { min-width: 30px; min-height: 22px; padding: 1px 5px; }
       .public-dashboard #table-root table { min-width: 650px; }
       .room-image-list { grid-template-columns: 1fr; }
       .room-image-list img { max-height: none; }
@@ -217,7 +215,7 @@
     <h1>Harvest Club 相互利用 空室履歴</h1>
     <div class="meta">
       <span class="pill">施設数: 43</span>
-      <span class="pill">最新確認: 5/24 12時</span>
+      <span class="pill">最新確認: 5/24 18時</span>
       <span class="pill">表示自動更新: 1時間ごと</span>
     </div>
     <p class="public-notice">このページは空室傾向を見やすく整理したものです。予約可否の最終確認と手続きは <a href="https://my.harvestclub.com/myharvest/reservations/vacancy?viewMode=guest" target="_blank" rel="noopener">東急ハーヴェストクラブ公式ページ</a> で行ってください。</p>
@@ -859,6 +857,15 @@
       tableRoot.innerHTML = '<div class="table-wrap"><table><thead><tr>' + header + '</tr></thead><tbody>' + rows + '</tbody></table></div>';
       renderRoomImages(facility);
     }
+    function shouldJumpToRoomImagesFromSummary() {
+      return isPublicDashboard && mobileCalendarQuery.matches;
+    }
+    function jumpToRoomImages() {
+      if (!shouldJumpToRoomImagesFromSummary()) return;
+      window.requestAnimationFrame(() => {
+        roomImagesRoot.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
 
     for (const facility of dashboard.facilities) {
       const option = document.createElement('option');
@@ -968,6 +975,7 @@
           facilitySelect.value = hotelId;
           showDetailHistory = false;
           render();
+          jumpToRoomImages();
         }
         return;
       }
@@ -981,7 +989,11 @@
         facilitySelect.value = hotelId;
         showDetailHistory = false;
         render();
-        window.scrollTo(currentScrollX, currentScrollY);
+        if (shouldJumpToRoomImagesFromSummary()) {
+          jumpToRoomImages();
+        } else {
+          window.scrollTo(currentScrollX, currentScrollY);
+        }
       }
     });
     calendarRoot.addEventListener('click', (event) => {
