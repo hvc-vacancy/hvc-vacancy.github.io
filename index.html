@@ -117,6 +117,8 @@
     thead th { position: sticky; top: 0; z-index: 1; background: #f9fafb; font-weight: 650; color: #344054; }
     .sticky-col { position: sticky; left: 0; z-index: 2; background: #ffffff; text-align: left; min-width: 116px; }
     thead .sticky-col { z-index: 3; background: #f9fafb; }
+    .summary-time-col, .detail-time-col { line-height: 1.25; }
+    .summary-table .summary-value-cell { min-width: 68px; }
     .num { text-align: right; font-variant-numeric: tabular-nums; }
     .room { max-width: 156px; overflow: hidden; text-overflow: ellipsis; }
     .status-full { color: var(--green); background: var(--green-bg); }
@@ -133,6 +135,8 @@
     .detail-link { display: inline-flex; align-items: center; min-height: 34px; padding: 5px 10px; border: 1px solid #b2ccff; border-radius: 6px; background: #eff6ff; color: #175cd3; font-weight: 700; text-decoration: none; }
     .detail-link:hover { background: #dbeafe; border-color: #84adff; }
     .facility-col { max-width: 132px; min-width: 92px; overflow: hidden; text-overflow: ellipsis; }
+    .summary-value-cell[data-summary-hotel-id] { cursor: pointer; }
+    .summary-value-cell.is-selected { outline: 2px solid #175cd3; outline-offset: -2px; }
     .availability-cell-positive { background: #fff7ed; }
     .availability-cell-zero { background: #f2f4f7; }
     .availability-count { display: inline-flex; align-items: center; justify-content: center; min-width: 38px; min-height: 24px; padding: 2px 7px; border-radius: 6px; font-weight: 700; }
@@ -189,6 +193,17 @@
       table { min-width: 760px; font-size: 15px; }
       th, td { padding: 6px 7px; }
       .sticky-col { min-width: 104px; }
+      .public-dashboard .sticky-col { width: 74px; min-width: 74px; max-width: 74px; white-space: normal; }
+      .public-dashboard .summary-table-wrap { margin-left: 0; margin-right: 0; overflow: visible; border: 0; border-radius: 0; background: transparent; }
+      .public-dashboard .summary-table { display: block; width: 100%; min-width: 0; font-size: 15px; }
+      .public-dashboard .summary-table thead { display: none; }
+      .public-dashboard .summary-table tbody { display: grid; gap: 8px; }
+      .public-dashboard .summary-table tr { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: #ffffff; }
+      .public-dashboard .summary-table td { position: static; display: flex; min-width: 0; min-height: 48px; align-items: center; justify-content: center; padding: 6px; border: 1px solid #e4e7ec; border-radius: 6px; text-align: center; white-space: normal; }
+      .public-dashboard .summary-table .summary-time-col { grid-column: 1 / -1; display: block; width: auto; max-width: none; min-height: 0; padding: 0 0 2px; border: 0; background: transparent; color: #344054; font-weight: 700; text-align: left; }
+      .public-dashboard .summary-value-cell::before { content: attr(data-label); display: block; max-width: 100%; margin-bottom: 3px; overflow: hidden; color: var(--muted); font-size: 12px; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
+      .public-dashboard .summary-value-cell { flex-direction: column; }
+      .public-dashboard #table-root table { min-width: 650px; }
       .room-image-list { grid-template-columns: 1fr; }
       .room-image-list img { max-height: none; }
       .image-modal-body { padding: 8px; }
@@ -304,6 +319,8 @@
     if (!dashboard) { throw new Error('dashboard-data-not-loaded'); }
     const initialFacilityId = "38";
     const initialDate = "2026-06-28";
+    const isPublicDashboard = dashboard.publicMode === true;
+    if (isPublicDashboard) document.documentElement.classList.add('public-dashboard');
     const facilitySelect = document.getElementById('facility');
     const dateSelect = document.getElementById('stay-date');
     const facilitySummaryRoot = document.getElementById('facility-summary-root');
@@ -764,7 +781,7 @@
       }
       const displayRows = showSummaryHistory ? rows : rows.slice(0, 1);
       const header = [
-        '<th class="sticky-col">確認日時</th>',
+        '<th class="sticky-col summary-time-col">確認日時</th>',
         ...visibleSummaryFacilities.map((facility) => (
           '<th class="facility-col' + (facility.hotelId === facilitySelect.value ? ' is-selected' : '') + '" title="' + escapeHtml(facility.hotelName) + '">' +
           '<button type="button" class="facility-jump' + (facility.hotelId === facilitySelect.value ? ' is-selected' : '') + '" data-hotel-id="' + escapeHtml(facility.hotelId) + '">' +
@@ -774,16 +791,20 @@
       ].join('');
       const body = displayRows.map((row) => {
         const cells = visibleSummaryFacilities.map((facility) => {
+          const label = escapeHtml(facilityDisplayName(facility));
+          const hotelId = escapeHtml(facility.hotelId);
+          const selectedClass = facility.hotelId === facilitySelect.value ? ' is-selected' : '';
           const value = row.values[facility.hotelId];
-          if (value === undefined || value === null || value === '') return '<td></td>';
+          if (value === undefined || value === null || value === '') return '<td class="summary-value-cell is-empty' + selectedClass + '" data-label="' + label + '" data-summary-hotel-id="' + hotelId + '"></td>';
           const numberValue = Number(value);
           const klass = numberValue > 0 ? 'availability-positive' : 'availability-zero';
           const cellKlass = numberValue > 0 ? 'availability-cell-positive' : 'availability-cell-zero';
-          return '<td class="' + cellKlass + '"><span class="availability-count ' + klass + '">' + escapeHtml(value) + '</span></td>';
+          return '<td class="summary-value-cell ' + cellKlass + selectedClass + '" data-label="' + label + '" data-summary-hotel-id="' + hotelId + '"><span class="availability-count ' + klass + '">' + escapeHtml(value) + '</span></td>';
         }).join('');
-        return '<tr><td class="sticky-col"><button type="button" class="row-action summary-row-hide" data-row-key="' + escapeHtml(row.key) + '">非表示</button> ' + escapeHtml(row.checkedAtLabel) + '</td>' + cells + '</tr>';
+        const hideAction = isPublicDashboard ? '' : '<button type="button" class="row-action summary-row-hide" data-row-key="' + escapeHtml(row.key) + '">非表示</button> ';
+        return '<tr><td class="sticky-col summary-time-col">' + hideAction + escapeHtml(row.checkedAtLabel) + '</td>' + cells + '</tr>';
       }).join('');
-      facilitySummaryRoot.innerHTML = '<div class="table-wrap"><table><thead><tr>' + header + '</tr></thead><tbody>' + body + '</tbody></table></div>';
+      facilitySummaryRoot.innerHTML = '<div class="table-wrap summary-table-wrap"><table class="summary-table"><thead><tr>' + header + '</tr></thead><tbody>' + body + '</tbody></table></div>';
     }
     function updateSummaryHistoryButton(count) {
       toggleSummaryHistoryButton.checked = showSummaryHistory;
@@ -821,7 +842,7 @@
       }
       updateDetailHistoryButton(entry.checks.length);
       const header = [
-        '<th class="sticky-col">確認日時</th>',
+        '<th class="sticky-col detail-time-col">確認日時</th>',
         '<th class="num">空き</th>',
         ...entry.roomTypes.map((room) => '<th class="room" title="' + escapeHtml(room) + '">' + escapeHtml(room) + '</th>')
       ].join('');
@@ -833,7 +854,7 @@
           const title = value ? (value.title || [value.statusRaw, value.additionalText].filter(Boolean).join(' ')) : '';
           return '<td><span class="status ' + classForStatus(status) + '" title="' + escapeHtml(title) + '">' + escapeHtml(status) + '</span></td>';
         }).join('');
-        return '<tr><td class="sticky-col" title="' + escapeHtml(check.checkedAtJst || check.checkedAtIso || '') + '">' + escapeHtml(check.checkedAtLabel) + '</td><td class="num">' + escapeHtml(check.availableCount) + '</td>' + cells + '</tr>';
+        return '<tr><td class="sticky-col detail-time-col" title="' + escapeHtml(check.checkedAtJst || check.checkedAtIso || '') + '">' + escapeHtml(check.checkedAtLabel) + '</td><td class="num">' + escapeHtml(check.availableCount) + '</td>' + cells + '</tr>';
       }).join('');
       tableRoot.innerHTML = '<div class="table-wrap"><table><thead><tr>' + header + '</tr></thead><tbody>' + rows + '</tbody></table></div>';
       renderRoomImages(facility);
@@ -937,6 +958,16 @@
         if (rowKey) {
           hiddenSummaryRows.add(rowKey);
           renderFacilitySummary(dateSelect.value);
+        }
+        return;
+      }
+      const summaryCell = event.target instanceof Element ? event.target.closest('.summary-value-cell[data-summary-hotel-id]') : null;
+      if (summaryCell) {
+        const hotelId = summaryCell.dataset.summaryHotelId || '';
+        if (hotelId) {
+          facilitySelect.value = hotelId;
+          showDetailHistory = false;
+          render();
         }
         return;
       }
