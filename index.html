@@ -220,15 +220,8 @@
     </div>
     <p class="public-notice">このページは空室傾向を見やすく整理したものです。予約可否の最終確認と手続きは <a href="https://my.harvestclub.com/myharvest/reservations/vacancy?viewMode=guest" target="_blank" rel="noopener">東急ハーヴェストクラブ公式ページ</a> で行ってください。</p>
     <div class="legend">
-      <span class="sample status-full">〇</span><span>空きあり</span>
-      <span class="sample status-some">△</span><span>空き少なめ</span>
-      <span class="sample status-wait">C</span><span>キャンセル待ち</span>
-      <span class="sample status-wait">C10+</span><span>キャンセル待ち10組以上</span>
-      <span class="sample status-ref">参△</span><span>ホーム利用参考（空室数に含める）</span>
-      <span class="sample status-ref">←参△</span><span>前日参照（空室数に含める）</span>
-      <span class="sample status-special">特</span><span>特定期間（空室判定外）</span>
-      <span class="sample status-closed">休</span><span>全館休業日</span>
-      <span class="sample status-none">×</span><span>空きなし</span>
+      <span class="sample availability-positive">1</span><span>空きあり（ホーム利用・前日参照は解釈済み）</span>
+      <span class="sample availability-zero">0</span><span>空きなし・キャンセル待ち・休業・判定外</span>
     </div>
     <div class="header-actions">
       <button type="button" id="toggle-log" hidden>ログ表示</button>
@@ -313,7 +306,7 @@
       <img id="image-modal-img" src="" alt="">
     </div>
   </div>
-  <script src="./dashboard-data.js?v=c3039cb2436a"></script>
+  <script src="./dashboard-data.js?v=f667c305fd43"></script>
   <script>
     const dashboard = window.__HARVEST_DASHBOARD_DATA__;
     if (!dashboard) { throw new Error('dashboard-data-not-loaded'); }
@@ -370,23 +363,39 @@
     function escapeHtml(value) {
       return String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;');
     }
-    function classForStatus(value) {
-      const text = String(value ?? '').normalize('NFKC').replace(/\s+/g, '');
-      if (text.startsWith('〇') || text.startsWith('○')) return 'status-full';
-      if (text.startsWith('△')) return 'status-some';
-      if (text.startsWith('C') || text.startsWith('⊝')) return 'status-wait';
-      if (text.startsWith('×')) return 'status-none';
-      if (text.startsWith('特') || text.startsWith('☆')) return 'status-special';
-      if (text.startsWith('←') || text.startsWith('参') || text.startsWith('H') || text.startsWith('↑')) return 'status-ref';
-      if (text.startsWith('未')) return 'status-missing';
-      if (text.startsWith('休') || text.startsWith('-')) return 'status-closed';
-      return '';
-    }
     function roomColumnKey(room) {
       return typeof room === 'string' ? room : (room.key || room.name || '');
     }
     function roomColumnLabel(room) {
       return typeof room === 'string' ? room : (room.label || room.name || room.key || '');
+    }
+    function numericAvailability(value) {
+      if (!value) return '';
+      const count = Number(value.availabilityCount);
+      if (Number.isFinite(count)) return String(count);
+      return value.isAvailable ? '1' : '0';
+    }
+    function classForAvailability(value) {
+      return Number(numericAvailability(value) || 0) > 0 ? 'availability-positive' : 'availability-zero';
+    }
+    function availabilityRuleLabel(value) {
+      const labels = {
+        direct: '直接判定',
+        home_reference: 'ホーム利用参照',
+        previous_day_reference: '前日参照',
+        previous_day_home_reference: '前日参照 + ホーム利用参照',
+        previous_day_missing_reference: '前日参照先なし',
+        previous_day_depth_limit: '前日参照上限',
+        home_missing_reference: 'ホーム利用参照先なし'
+      };
+      return labels[value?.sourceRule] || value?.sourceRule || '';
+    }
+    function availabilityTitle(value) {
+      if (!value) return '';
+      return [
+        '空き数: ' + (numericAvailability(value) || '0'),
+        availabilityRuleLabel(value) ? '判定: ' + availabilityRuleLabel(value) : ''
+      ].filter(Boolean).join(' / ');
     }
     function currentFacility() {
       return dashboard.facilities.find((facility) => facility.hotelId === facilitySelect.value) || dashboard.facilities[0] || null;
@@ -857,9 +866,9 @@
       const rows = visibleChecks.map((check) => {
         const cells = entry.roomTypes.map((room) => {
           const value = check.values[roomColumnKey(room)] || null;
-          const status = value ? value.status : '';
-          const title = value ? (value.title || [value.statusRaw, value.additionalText].filter(Boolean).join(' ')) : '';
-          return '<td><span class="status ' + classForStatus(status) + '" title="' + escapeHtml(title) + '">' + escapeHtml(status) + '</span></td>';
+          const count = numericAvailability(value);
+          const title = availabilityTitle(value);
+          return '<td><span class="availability-count ' + classForAvailability(value) + '" title="' + escapeHtml(title) + '">' + escapeHtml(count) + '</span></td>';
         }).join('');
         return '<tr><td class="sticky-col detail-time-col" title="' + escapeHtml(check.checkedAtJst || check.checkedAtIso || '') + '">' + escapeHtml(check.checkedAtLabel) + '</td><td class="num">' + escapeHtml(check.availableCount) + '</td>' + cells + '</tr>';
       }).join('');
