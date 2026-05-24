@@ -306,7 +306,7 @@
       <img id="image-modal-img" src="" alt="">
     </div>
   </div>
-  <script src="./dashboard-data.js?v=f667c305fd43"></script>
+  <script src="./dashboard-data.js?v=1ca5681f3915"></script>
   <script>
     const dashboard = window.__HARVEST_DASHBOARD_DATA__;
     if (!dashboard) { throw new Error('dashboard-data-not-loaded'); }
@@ -918,7 +918,7 @@
     facilitySelect.value = initialFacilityId || (dashboard.facilities[0]?.hotelId || '');
     fillDates(initialDate);
     facilitySelect.addEventListener('change', () => { showDetailHistory = false; render(); });
-    dateSelect.addEventListener('change', () => { syncCalendarWindowToDate(dateSelect.value); showSummaryHistory = false; showDetailHistory = false; render(); });
+    dateSelect.addEventListener('change', () => { syncCalendarWindowToDate(dateSelect.value); render(); });
     toggleSummaryHistoryButton.addEventListener('change', () => {
       showSummaryHistory = toggleSummaryHistoryButton.checked;
       renderFacilitySummary(dateSelect.value);
@@ -1021,8 +1021,6 @@
       if (!stayDate) return;
       dateSelect.value = stayDate;
       syncCalendarWindowToDate(stayDate);
-      showSummaryHistory = false;
-      showDetailHistory = false;
       render();
     });
     render();
