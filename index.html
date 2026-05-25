@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="ja">
 <head>
   <meta charset="utf-8">
@@ -306,7 +306,7 @@
       <img id="image-modal-img" src="" alt="">
     </div>
   </div>
-  <script src="./dashboard-data.js?v=2a0693518e95"></script>
+  <script src="./dashboard-data.js?v=140fbc070522"></script>
   <script>
     const dashboard = window.__HARVEST_DASHBOARD_DATA__;
     if (!dashboard) { throw new Error('dashboard-data-not-loaded'); }
@@ -347,6 +347,7 @@
     let hideNoAvailabilitySummaryColumns = false;
     let showSummaryHistory = false;
     let showDetailHistory = false;
+    let summaryTableScrollLeft = 0;
     const ticketEligibleHotelIds = new Set([
       '21', '07', '03', '18', '25', '05', '09', '04', '16', '13',
       '17:01', '17:02', '29', '01', '14', '19', '08', '27', '23'
@@ -755,7 +756,28 @@
       }).join('');
       calendarRoot.innerHTML = '<div class="calendar-months">' + monthBlocks + '</div>';
     }
+    function captureSummaryScrollLeft() {
+      const wrap = facilitySummaryRoot.querySelector('.summary-table-wrap');
+      if (wrap) summaryTableScrollLeft = wrap.scrollLeft;
+      return summaryTableScrollLeft;
+    }
+    function restoreSummaryScrollLeft(scrollLeft) {
+      const wrap = facilitySummaryRoot.querySelector('.summary-table-wrap');
+      if (!wrap) return;
+      const maxScrollLeft = Math.max(0, wrap.scrollWidth - wrap.clientWidth);
+      wrap.scrollLeft = Math.max(0, Math.min(scrollLeft, maxScrollLeft));
+      summaryTableScrollLeft = wrap.scrollLeft;
+    }
+    function scheduleSummaryScrollRestore(scrollLeft) {
+      const restore = () => restoreSummaryScrollLeft(scrollLeft);
+      if (typeof window.requestAnimationFrame === 'function') {
+        window.requestAnimationFrame(restore);
+      } else {
+        restore();
+      }
+    }
     function renderFacilitySummary(stayDate) {
+      const previousSummaryScrollLeft = captureSummaryScrollLeft();
       if (!stayDate) {
         facilitySummaryRoot.innerHTML = '<div class="empty">日付を選択してください。</div>';
         updateSummaryHistoryButton(0);
@@ -832,6 +854,7 @@
         return '<tr><td class="sticky-col summary-time-col">' + hideAction + escapeHtml(row.checkedAtLabel) + '</td>' + cells + '</tr>';
       }).join('');
       facilitySummaryRoot.innerHTML = '<div class="table-wrap summary-table-wrap"><table class="summary-table"><thead><tr>' + header + '</tr></thead><tbody>' + body + '</tbody></table></div>';
+      scheduleSummaryScrollRestore(previousSummaryScrollLeft);
     }
     function updateSummaryHistoryButton(count) {
       toggleSummaryHistoryButton.checked = showSummaryHistory;
