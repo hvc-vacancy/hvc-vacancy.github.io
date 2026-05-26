@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="ja">
 <head>
   <meta charset="utf-8">
@@ -299,7 +299,7 @@
       <img id="image-modal-img" src="" alt="">
     </div>
   </div>
-  <script src="./dashboard-data.js?v=668ce52ba420"></script>
+  <script src="./dashboard-data.js?v=8956e7f303a7"></script>
   <script>
     const dashboard = window.__HARVEST_DASHBOARD_DATA__;
     if (!dashboard) { throw new Error('dashboard-data-not-loaded'); }
@@ -579,7 +579,7 @@
       dateSelect.innerHTML = '';
       const placeholder = document.createElement('option');
       placeholder.value = '';
-      placeholder.textContent = '日付を選択';
+      placeholder.textContent = '';
       placeholder.disabled = true;
       dateSelect.appendChild(placeholder);
       const dates = allDateEntries();
@@ -772,7 +772,7 @@
     function renderFacilitySummary(stayDate) {
       const previousSummaryScrollLeft = captureSummaryScrollLeft();
       if (!stayDate) {
-        facilitySummaryRoot.innerHTML = '<div class="empty">日付を選択してください。</div>';
+        facilitySummaryRoot.innerHTML = '<div class="empty">日付未指定です。</div>';
         updateSummaryHistoryButton(0);
         updateSummaryZeroColumnsButton(0);
         return;
@@ -880,7 +880,7 @@
       renderFacilitySummary(dateSelect.value);
       renderFacilityRoomLink(facility);
       if (!facility || !dateSelect.value) {
-        tableRoot.innerHTML = '<div class="empty">施設と日付を選択してください。</div>';
+        tableRoot.innerHTML = '<div class="empty">施設と日付が未指定です。</div>';
         roomImagesRoot.innerHTML = '';
         updateDetailHistoryButton(0);
         return;
